@@ -1,0 +1,61 @@
+	TITLE	"mp3.a by Vinayak Deshpande"
+;		special thanks to Ben and Sai for their help explaining
+;		what I was missing.
+        USE     "hawk.h"
+        USE     "stdio.h"
+        USE     "ascii.h"
+
+        EXT     MP3DATA
+
+        INT     MAIN
+        S       MAIN
+;Activation Record for TRAVERSE
+RETAD	=	0
+NODE	=	4
+ARSIZE	=	8
+
+TRAVERSE:
+	; expects R8: the pointer
+	; returns nothing
+	STORES	R1,R2
+	STORE	R8,R2,NODE	; Point to the data
+	ADDSI	R2,ARSIZE
+	LOADS	R3,R8		; grab MP3DATA and get the value
+	TESTR	R3		; If pointer is null end recursion
+	BZS	QUIT
+
+	BITTST	R3,0		; If pointer is at odd value
+	BBS	PRINTNODE	; call the print function
+
+	MOVE	R8,R3		; if pointer is at even value, recurse
+	JSR	R1,TRAVERSE
+	LOAD	R8,R2,NODE-ARSIZE	; pop AR to move back up tree
+	ADDSI	R8,4
+	JSR	R1,TRAVERSE
+
+	BR	QUIT
+PRINTNODE:
+	LIL	R1,PUTSTR
+	JSRS	R1,R1
+	ADDSI	R8,4		; increment pointer
+	JSR	R1,TRAVERSE	; recurse
+
+QUIT:
+	ADDSI	R2,-ARSIZE	;return sequence for traverse
+	LOADS	PC,R2
+
+;Activation Record for MAIN
+;RETAD	=	0
+ARSIZE	=	4
+
+MAIN:
+	STORES	R1,R2
+	ADDSI	R2,ARSIZE
+
+	LIL	R8,MP3DATA
+	JSR	R1,TRAVERSE
+
+	ADDSI	R2,-ARSIZE
+	LOADS	PC,R2
+
+	END

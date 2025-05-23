@@ -1,0 +1,127 @@
+	TITLE	"mp4.a by Vinayak Deshpande"
+;		Acknowledgements: Sai, Emily, Professor Jones
+;		specifically, inspiration from mp3 by DWJones, as well as
+;		the serpinski's triangle problem and pascal's triangle problem
+;		from previous years.
+	USE	"hawk.h"
+	USE	"stdio.h"
+	USE	"ascii.h"
+
+TERMROWS	=	0
+TERMCOLS	=	4
+
+	INT	MAIN
+	S	MAIN
+
+;activation record for TREEMAKER, recursive routine for tree making
+;RETAD		=	0
+MAXHEIGHT	=	4	; MAX TOTAL HEIGHT
+COUNTER		=	8	; COUNTER FOR HEIGHT
+COUNTER2	=	12	; COUNTER FOR Distance manipulation
+WIDTH		=	16	; The width just before recursion
+HEIGHT		=	20	; the branch height
+ARSIZE		=	24
+
+TREEMAKER:
+	; expects r3 = midpoint
+	; expects r4 = max height
+	; expects r5 = starting postion of node
+	; expects r11= branch length of previous triangle
+	STORES	R1,R2
+	MOVE	R8,R3
+	MOVE	R9,R5
+	STORE	R9,R2,COUNTER	; -- move to AR
+	STORE	R10,R2,MAXHEIGHT; -- move to AR
+	ADDI	R2,R2,ARSIZE	; -- push AR
+	MOVE	R10,R4		; -- move max height to safe register
+	LIS	R12,0		; -- reset counter to 0
+	SR	R11,1		; -- get new branch height
+TREEGROWING:
+	CMP	R12,R11
+	BGE	TREECURSION	; if(counter>=branchheight) break
+	MOVE	R3,R8
+	SUB	R3,R3,R12	; x = mid-counter
+	MOVE	R4,R9		; y = height from 0
+	LIL	R1,PUTAT
+	JSRS	R1,R1
+	LIS	R3,'/'
+	LIL	R1,PUTCHAR
+	JSRS	R1,R1
+	MOVE	R3,R8		; x = mid
+	ADD	R3,R3,R12	; x = x+counter
+	ADDSI	R3,1		; x ++ to avoid collision
+	MOVE	R4,R9
+	LIL	R1,PUTAT
+	JSRS	R1,R1
+	LIS	R3,'\'
+	LIL	R1,PUTCHAR
+	JSRS	R1,R1
+	ADDSI	R9,1		; h++
+	ADDSI	R12,1		; counter++
+	JUMP	TREEGROWING
+TREECURSION:
+	CMPI	R11,0		; if(branch height == 0) break
+	BEQ	TREEQUITTER
+				; --left side
+	STORE	R12,R2,COUNTER2	; save counter to AR
+	STORE	R11,R2,HEIGHT	; save branch height to AR
+	MOVE	R4,R10		; begin setup for recursion
+	MOVE	R5,R9
+	MOVE	R3,R8
+	STORE	R8,R2,WIDTH	; save x to AR
+	SUB	R3,R3,R12	; x-counter
+	JSR	R1,TREEMAKER	; recurse
+
+				; --right side
+	LOAD	R12,R2,COUNTER2	; load saved values from AR
+	LOAD	R9,R2,COUNTER
+	LOAD	R8,R2,WIDTH
+	LOAD	R11,R2,HEIGHT
+	MOVE	R4,R10		; begin setup for recursion
+	MOVE	R5,R9
+	MOVE	R3,R8
+	ADD	R3,R3,R12	; x+counter
+	JSR	R1,TREEMAKER	; recurse
+TREEQUITTER:
+	ADDI	R2,R2,-ARSIZE
+	LOADS	PC,R2		; return
+
+
+;activation record for MAIN
+;RETAD	=	0
+ARSIZE	=	28
+
+MAIN:	;uses TERMINFO to get
+        ; R3 = width
+        ; R4 = height
+	STORES  R1,R2
+	ADDI	R2,R2,ARSIZE
+	LIL     R1,TERMINFO
+	LOAD    R3,R1,TERMCOLS	; -- param width
+	LOAD    R4,R1,TERMROWS	; -- param height
+	LIS	R5,1		; -- maxheight counter
+
+WIDTHCALC:
+	CMP	R3,R4		;if(width > height) break
+	BGT	HEIGHTCALC
+	MOVE	R6,R3
+	SR	R6,1
+	MOVE	R4,R6		; height = width/2
+HEIGHTCALC:			; -- to make sure maxheight is power of 2
+	CMP	R5,R4		; if(maxheight > height) break
+	BGT	FINISHSETUP
+	SL	R5,1		; maxheight*2
+	JUMP	HEIGHTCALC
+FINISHSETUP:
+	SR	R5,1
+	MOVE	R4,R5		; height = maxheight
+	SR	R3,1		; get midpoint
+	LIS	R5,0		; setup counter
+	ADDSI	R3,-3		; center the midpoint
+	MOVE	R11,R4		; set up branch height
+	JSR	R1,TREEMAKER	; call treemaker(width,height,counter,branchh)
+
+	ADDI	R2,R2,-ARSIZE
+	LOADS	PC,R2		; return
+
+	END

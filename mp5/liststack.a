@@ -1,0 +1,137 @@
+	TITLE	"liststack.a by Vinayak Deshpande -- list stack implementation"
+		; thanks to emily and sai for help explaining concepts
+		; acknowledgement to Professor Jones for ARRAYSTACK code as
+		; starting point for liststack
+		; also thanks to Geeks4Geeks for help explaining data struct
+	USE	"hawk.h"
+	USE	"stdlib.h"
+	USE	"exceptions.h"
+
+	USE	"stack.h"
+
+;These methods are defined in stack.h
+;EMPTY	=	0	; pointer to empty method
+;PUSH	=	4	; pointer to push method
+;POP	=	8	; pointer to pop method
+
+; additional fields for list stack objects
+TOPNODE	=	12	; location of address of top most node
+INITSIZE=	16	; size of the header object
+
+;=========
+	INT	NEWLISTSTACK	; construct a new stack object,see liststack.h
+				; given nothing
+				; returns R3 -- pointer to the header object
+				; wipes out R3-R7
+; AR for NEWLISTSTACK
+;RETAD	=	0
+ARSIZE	=	4
+NEWLISTSTACK:
+	; Constructor for LISTSTACK
+	STORES	R1,R2
+	ADDSI	R2,ARSIZE
+
+	LIS	R3,INITSIZE	; -- allocate space for header object
+	LIL	R1,MALLOC	; -- 4 fields = 4*4 bytes = 16
+	JSRS	R1,R1		; address = malloc( INITSIZE)
+
+				; -- initialize method pointers
+	LEA	R4,LSEMPTY
+	STORE	R4,R3,EMPTY	; -- EMPTY method at pos 0
+	LEA	R4,LSPUSH
+	STORE	R4,R3,PUSH	; -- PUSH method at pos 4
+	LEA	R4,LSPOP
+	STORE	R4,R3,POP	; -- POP method at pos 8
+	LIS	R4,0		; -- address should point to null value
+	STORE	R4,R3,TOPNODE	; -- TOPNODE field at pos 12
+
+	ADDSI	R2,-ARSIZE	; return address
+	LOADS	PC,R2
+;========
+; no AR for LSEMPTY
+LSEMPTY:
+	; test to see if given stack is empty
+	; given R3 -- stack to test
+	; returns R3 -- 0 if not empty, non-zero if empty
+	; wipes R4-R7
+	LOAD	R3,R3,TOPNODE	; temp = TOPNODE
+	CMPI	R3,0		; if(temp == 0)
+	BEQ	LSEZERO		; jump to LSEZERO
+	LIS	R3,-1		; else{temp = -1)
+LSEZERO:
+	NOT	R3		; retval = (temp == 0)
+	JUMPS	R1		; return retval
+;========
+;AR for LSPUSH
+;RETAD	=	0
+NODEVAL	=	0	; pointer to the value saved in the node
+PRENODE	=	4	; pointer to the address of the previous node
+R3SAVE	=	4	; place to save value in R3 to the AR
+R4SAVE	=	8	; place to save value in R4 to the AR
+ARSIZE	=	12
+NODESIZE=	8	; size of the node in bytes
+LSPUSH:
+	; push a word on the stack
+	; given R3 -- stack to push on
+	;	R4 -- value to push
+	; returns nothing
+	; wipes out R3-R7
+	STORES	R1,R2
+	ADDI	R2,R2,ARSIZE
+	STORE	R3,R2,R3SAVE	; -- save R3 value to AR
+	STORE	R4,R2,R4SAVE	; -- save R4 value to AR
+
+	LIS	R3,NODESIZE	; nodesize = 2 fields * 4 bytes
+	LIL	R1,MALLOC	; newnode = malloc(nodesize)
+	JSRS	R1,R1
+	CMPI	R3,0
+	BEQ	THROW
+	MOVE	R6,R3		; temp1 = newnode
+	LOAD	R3,R2,R3SAVE	; this.s = s -- retrieve given R3 from AR
+	LOAD	R4,R2,R4SAVE	; this.val = val -- retrieve given R4 from AR
+	LOAD	R5,R3,TOPNODE	; temp2 = s.topnode
+	STORE	R6,R3,TOPNODE	; s.topnode = temp1
+	STORE	R4,R6,NODEVAL	; temp1.val = value
+	STORE	R5,R6,PRENODE	; temp1.previousnode = temp2
+
+	ADDI	R2,R2,-ARSIZE
+	LOADS	PC,R2		; return
+;========
+
+;AR for LSPOP
+;RETAD	=	0
+RETVAL	=	4	; place to save value in AR
+ARSIZE	=	8
+LSPOP:
+	; pop a word from the stack
+	; given R3 -- stack to pop from
+	; returns R3 -- value popped
+	; wipes out R4-R7
+	STORES	R1,R2
+	ADDI	R2,R2,ARSIZE
+
+	LOAD	R6,R3,TOPNODE	; node = s.TOPNODE
+	CMPI	R6,0
+	BEQ	THROW
+	LOAD	R5,R6,PRENODE	; temp1 = node.previousnode
+	STORE	R5,R3,TOPNODE	; s.TOPNODE = temp1
+	LOAD	R4,R6,NODEVAL	; temp2 = node.val
+	STORE	R4,R2,RETVAL	; -- save temp2 in AR
+	MOVE	R3,R6		; -- temp3 = node
+	LIL	R1,FREE		; free(temp3)
+	JSRS	R1,R1
+	LOAD	R3,R2,RETVAL	; retval = val -- retrieve val from AR
+
+	ADDI	R2,R2,-ARSIZE	;return retval
+	LOADS	PC,R2
+
+THROW:
+	LIL	R3,STACKEXCEPT
+	LOADS	R1,R3
+	LOAD	R2,R1,EXOLD
+	STORES	R2,R3
+	LOAD	R2,R1,EXAR
+	LOADS	PC,R1
+
+	END
+	

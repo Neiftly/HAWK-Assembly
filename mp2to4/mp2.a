@@ -1,0 +1,33 @@
+	TITLE "mp2.a by Vinayak Deshpande"
+
+	USE 	"hawk.h"
+	USE	"stdio.h"
+	
+	EXT	MP2DATA
+	INT 	MAIN
+	S	MAIN
+
+MAIN:
+	STORES 	R1,R2
+	ADDSI	R2,4
+	LIL	R8,0
+	LIL	R9,MP2DATA
+
+LOOP:
+	ADD	R9,R8,R9
+	LOADS	R7,R9
+	
+	CMPI	R7,0
+	BEQ	STOP
+
+	LIL	R1,PUTSTR
+	JSRS	R1,R1
+
+	ADDSI	R8,4
+	BR	LOOP
+
+STOP:
+	ADDSI 	R2, -4
+	LOADS 	PC,R2
+
+	END
